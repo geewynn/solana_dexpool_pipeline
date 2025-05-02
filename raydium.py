@@ -11,7 +11,7 @@ from solders.pubkey import Pubkey
 
 from decoders.raydium_decoder import AnchorRaydiumDecoder
 
-from utility import upload_to_s3, get_timestamp, get_s3_bucket #, upload_to_storage
+from utility import upload_to_s3, get_timestamp, get_s3_bucket
 from dotenv import load_dotenv
 
 load_dotenv()

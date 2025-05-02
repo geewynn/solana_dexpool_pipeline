@@ -9,7 +9,6 @@ from solana.rpc.commitment import Processed
 
 from orca_whirlpool.accounts import AccountFinder, AccountFetcher
 from orca_whirlpool.constants import ORCA_WHIRLPOOL_PROGRAM_ID
-# from decoders.orca_decoder import AnchorWhirlpoolDecoder
 from time import sleep
 
 from utility import get_s3_bucket, get_timestamp, upload_to_s3

@@ -1,8 +1,8 @@
-import boto3
 import json
 import os
 from datetime import datetime
 
+import boto3
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -14,10 +14,11 @@ STORAGE_ENDPOINT_URL = os.getenv("STORAGE_ENDPOINT_URL")
 STORAGE_BUCKET_NAME = os.getenv("STORAGE_BUCKET_NAME")
 
 S3 = boto3.client(
-        "s3",
-        aws_access_key_id=STORAGE_ACCESS_KEY,
-        aws_secret_access_key=STORAGE_SECRET_KEY,
-    )
+    "s3",
+    aws_access_key_id=STORAGE_ACCESS_KEY,
+    aws_secret_access_key=STORAGE_SECRET_KEY,
+)
+
 
 def upload_to_s3(bucket: str, key: str, data: dict, log: bool = True) -> None:
     """
@@ -34,7 +35,7 @@ def upload_to_s3(bucket: str, key: str, data: dict, log: bool = True) -> None:
             Bucket=bucket,
             Key=key,
             Body=json.dumps(data, indent=2),
-            ContentType="application/json"
+            ContentType="application/json",
         )
         if log:
             print(f"Uploaded to s3://{bucket}/{key}")
@@ -45,6 +46,7 @@ def upload_to_s3(bucket: str, key: str, data: dict, log: bool = True) -> None:
 def get_timestamp(fmt: str = "%Y-%m-%d_%H-%M-%S") -> str:
     """Returns the current timestamp string formatted for filenames or logs."""
     return datetime.now().strftime(fmt)
+
 
 def get_s3_bucket() -> str:
     """

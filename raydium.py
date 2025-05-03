@@ -16,7 +16,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
+PROTOCOL_POSITION_SIZE = 225      # 8‑byte Anchor discriminator + 217‑byte struct
+POOL_ID_OFFSET         = 9 
 TICK_ARRAY_SIZE = 60
 POOL_ACCOUNT_SIZE = 1544
 TOKEN_MINT_A_OFFSET = 73
@@ -107,6 +108,69 @@ class RaydiumDataFetcher:
         except Exception as e:
             print(f"Error fetching account {address}: {e}")
             return None
+        
+
+    def fetch_protocol_positions(self, pool_pubkey: str) -> List[dict]:
+            """
+            Return a list of decoded ProtocolPositionState accounts
+            for the CLMM pool at `pool_pubkey`.
+            """
+            pool_key = Pubkey.from_string(pool_pubkey)
+            print('pool',pool_key)
+
+            filters = [
+                PROTOCOL_POSITION_SIZE,
+                MemcmpOpts(offset=POOL_ID_OFFSET, bytes=str(pool_key))
+            ]
+
+            resp = self.client.get_program_accounts(
+                self.PROGRAM_ID,
+                commitment=Processed,
+                filters=filters
+            )
+
+            decoded: List[dict] = []
+            for acct in resp.value:
+                decoded_acct = self.decoder.decode_account(acct.account.data, str(acct.pubkey))
+                if "error" not in decoded_acct:         # safety guard
+                    decoded.append(decoded_acct["parsed"]["data"])
+            return decoded
+        
+    def get_account_data(self, address: str) -> Optional[Dict]:
+        try:
+            # print(f"Fetching account data for {address}")
+            pubkey = Pubkey.from_string(address)
+            response = self.client.get_account_info(pubkey)
+            if not response.value:
+                print(f"No account data found for {address}")
+                return None
+            decoded = self.decoder.decode_account(response.value.data, address)
+            return decoded
+        except Exception as e:
+            print(f"Error fetching account {address}: {e}")
+            return None
+     
+    def fetch_personal_positions(self, pool_pubkey: str) -> list[dict]:
+        pool_key = Pubkey.from_string(pool_pubkey)
+
+        filters = [
+            281,
+            MemcmpOpts(offset=41, bytes=str(pool_key))
+        ]
+
+        resp = self.client.get_program_accounts(
+            self.PROGRAM_ID,
+            commitment=Processed,          # or "confirmed" if you prefer finality
+            filters=filters
+        )
+
+        decoded: list[dict] = []
+        for acct in resp.value:
+            parsed = self.decoder.decode_account(acct.account.data, str(acct.pubkey))
+            if parsed and "error" not in parsed:
+                decoded.append(parsed["parsed"]["data"])
+
+        return decoded
 
     def fetch_pool_data(self, pool_address: str) -> Dict:
         pool_account = self.get_account_data(pool_address)
@@ -119,6 +183,15 @@ class RaydiumDataFetcher:
             tick_spacing = int(data["tickSpacing"])
             bitmap = data.get("tickArrayBitmap", [])
 
+            token_vault0 = data.get("tokenVault0")
+            token_vault1 = data.get("tokenVault1")
+
+            token_vault0_pubkey = Pubkey.from_string(token_vault0)
+            token_vault1_pubkey = Pubkey.from_string(token_vault1)
+
+            token_vault0_balance = self.client.get_token_account_balance(token_vault0_pubkey)
+            token_vault1_balance = self.client.get_token_account_balance(token_vault1_pubkey)
+            
             # Fetch extension bitmap
             pool_pubkey = Pubkey.from_string(pool_address)
             ext_addr = self.get_extension_address(pool_pubkey)
@@ -150,7 +223,19 @@ class RaydiumDataFetcher:
                 "extension": ext_data,
                 "currentTick": current_tick,
                 "tickSpacing": tick_spacing,
-                "currentArrayStart": self.get_array_start_index(current_tick, tick_spacing)
+                "currentArrayStart": self.get_array_start_index(current_tick, tick_spacing),
+                "tokenVault0": {
+                    "address": token_vault0,
+                    "balance": token_vault0_balance.value.amount,
+                    "decimals": token_vault0_balance.value.decimals,
+                    "amount": token_vault0_balance.value.ui_amount_string,
+                },
+                "tokenVault1": {
+                    "address": token_vault1,
+                    "balance": token_vault1_balance.value.amount,
+                    "decimals": token_vault1_balance.value.decimals,
+                    "amount": token_vault1_balance.value.ui_amount_string,
+                },
             }
             return result
         except Exception as e:
@@ -162,22 +247,60 @@ class RaydiumDataFetcher:
         pools = self.fetch_pools_for_token(token, quote_offset, base_offset, length)
         print(f"Found {len(pools)} pools for token {token}")
 
+        position=[]
         collected = []
+        personal_positions = []
         for p in pools:
+            print(f"Fetching data for pool {p}")
+            pos = self.fetch_protocol_positions(p)
+            if pos and "error" not in pos:
+                position.append(pos)
+            else:
+                print(f"Failed fetching protocol positions for pool {p}: {pos}")
+
+            print(f"Fetching data for pool {p}")
+            pes = self.fetch_personal_positions(p)
+            print('res',pes)
+            if pes and "error" not in pes:
+                personal_positions.append(pes)
+                
+            else:
+                print(f"Failed fetching protocol positions for pool {p}: {pes}")
+
             res = self.fetch_pool_data(p)
             if res and "error" not in res:
                 collected.append(res)
             else:
                 print(f"Failed fetching pool {p}: {res}")
+
         sleep(0.3)
 
-        # Build S3 key
+        # # Build S3 key
         timestamp = get_timestamp()
         bucket = get_s3_bucket()
-        key = f"raydiums/raydium_clmm_{token}_{timestamp}.json"
+        key = f"raydium_raw_persona/raydium_clmm_{token}_{timestamp}.json"
+        key_pool = f"raydium_raw_pool/raydium_clmm_{token}_{timestamp}.json"
+        key_position = f"raydium_raw_position/raydium_clmm_{token}_{timestamp}.json"
+
+        # collected = []
+        # for p in pools:
+        #     res = self.fetch_pool_data(p)
+        #     if res and "error" not in res:
+        #         collected.append(res)
+        #     else:
+        #         print(f"Failed fetching pool {p}: {res}")
+        # sleep(0.3)
+
+        # # Build S3 key
+        # timestamp = get_timestamp()
+        # bucket = get_s3_bucket()
+        # key = f"raydium_raw/raydium_clmm_{token}_{timestamp}.json"
 
         # Upload
-        upload_to_s3(bucket=bucket, key=key, data=collected)
+        # upload_to_s3(bucket=bucket, key=key, data=collected)
+        upload_to_s3(bucket=bucket, key=key, data=personal_positions)
+        upload_to_s3(bucket=bucket, key=key_pool, data=collected)
+        upload_to_s3(bucket=bucket, key=key_position, data=position)
 
 
 def run_raydium(token, rpc_url):

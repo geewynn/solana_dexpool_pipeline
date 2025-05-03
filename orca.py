@@ -32,6 +32,17 @@ def serialize_whirlpool_reward_info(reward_info):
         "growth_global_x64": str(reward_info.growth_global_x64),
     }
 
+def serialize_token_accounts(token_accounts):
+    return {
+        "mint": str(token_accounts.mint),
+        "owner": str(token_accounts.owner),
+        "amount": str(token_accounts.amount),
+        "delegate": str(token_accounts.delegate),
+        "is_native": token_accounts.is_native,
+        "delegated_amount": str(token_accounts.delegated_amount),
+        "close_authority": str(token_accounts.close_authority),
+    }
+
 def serialize_whirlpool(whirlpool, whirlpool_pubkey, token):
     return {
         "pubkey": str(whirlpool_pubkey),
@@ -75,6 +86,41 @@ def serialize_tick_array(tick_array):
         "whirlpool": str(tick_array.whirlpool),
     }
 
+def serialize_position_bundle(bundle):
+    if bundle is None:
+        return None
+    return {
+        "pubkey": str(bundle.pubkey),
+        "position_bundle_mint": str(bundle.position_bundle_mint),
+        "position_bitmap": [int(b) for b in bundle.position_bitmap],
+    }
+
+def serialize_position_reward_info(ri):
+    return {
+        "growth_inside_checkpoint": str(ri.growth_inside_checkpoint),
+        "amount_owed":              str(ri.amount_owed),
+    }
+
+def serialize_position(pos):
+    if pos is None:
+        return None
+    return {
+        "pubkey":            str(pos.pubkey),
+        "whirlpool":         str(pos.whirlpool),
+        "position_mint":     str(pos.position_mint),
+        "liquidity":         str(pos.liquidity),
+        "tick_lower_index":  pos.tick_lower_index,
+        "tick_upper_index":  pos.tick_upper_index,
+        "fee_growth_ckpt_a": str(pos.fee_growth_checkpoint_a),
+        "fee_owed_a":        str(pos.fee_owed_a),
+        "fee_growth_ckpt_b": str(pos.fee_growth_checkpoint_b),
+        "fee_owed_b":        str(pos.fee_owed_b),
+        "reward_infos": [
+            serialize_position_reward_info(ri) for ri in pos.reward_infos
+        ],
+    }
+
+
 # Fetch pools matching token mint
 def fetch_pool_addresses(rpc_url: str, token_mint: str) -> List[str]:
     client = Client(rpc_url)
@@ -98,7 +144,7 @@ def fetch_pool_addresses(rpc_url: str, token_mint: str) -> List[str]:
         found.add(str(acc.pubkey))
 
     print(f"Found {len(found)} matching pools.")
-    print(len(found))
+    # print(len(found))
     return list(found)
 
 
@@ -122,15 +168,26 @@ async def run_orca(token, rpc_url):
             tick_arrays = await finder.find_tick_arrays_by_whirlpool(
                 ORCA_WHIRLPOOL_PROGRAM_ID, whirlpool_pubkey
             )
+            token_vault_a_amount = await fetcher.get_token_account(whirlpool.token_vault_a)
+            token_vault_b_amount = await fetcher.get_token_account(whirlpool.token_vault_b)
+
+            positions_objs = await finder.find_positions_by_whirlpool(
+                ORCA_WHIRLPOOL_PROGRAM_ID,
+                whirlpool_pubkey
+            )
+            json_positions = [serialize_position(p) for p in positions_objs]
 
             data = {
                 "whirlpool": serialize_whirlpool(whirlpool, whirlpool_pubkey, token),
                 "tick_arrays": [serialize_tick_array(ta) for ta in tick_arrays],
+                "token_vault_a_amount": serialize_token_accounts(token_vault_a_amount),
+                "token_vault_b_amount": serialize_token_accounts(token_vault_b_amount),
+                "positions": json_positions,
             }
 
             all_data.append(data)
             print(f"Collected {address} with {len(tick_arrays)} tick arrays.")
-            sleep(0.5)
+            sleep(0.9)
 
         except Exception as e:
             print(f"Failed to fetch data for {address}: {e}")
@@ -139,7 +196,7 @@ async def run_orca(token, rpc_url):
     # Build S3 key
     timestamp = get_timestamp()
     bucket = get_s3_bucket()
-    key = f"orca/raydium_clmm_{token}_{timestamp}.json"
+    key = f"orca_pos/orca_{token}_{timestamp}.json"
 
     # Upload
     upload_to_s3(bucket=bucket, key=key, data=all_data)

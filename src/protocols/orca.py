@@ -1,40 +1,54 @@
-from time import sleep
+# src/protocols/orca.py
+import asyncio
 from typing import List
 
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
-
 from dotenv import load_dotenv
-from orca_whirlpool.accounts import AccountFetcher, AccountFinder
-from orca_whirlpool.constants import ORCA_WHIRLPOOL_PROGRAM_ID
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    wait_exponential,
+    stop_after_attempt,
+    AsyncRetrying,
+)
+from httpx import HTTPStatusError
+from time import time  # no blocking sleep
+
 from solana.rpc.api import Client
 from solana.rpc.async_api import AsyncClient
-from solana.rpc.commitment import Processed
 from solana.rpc.types import MemcmpOpts
-from solders.pubkey import Pubkey
+from solana.rpc.commitment import Processed
 from solana.exceptions import SolanaRpcException
+from solders.pubkey import Pubkey
 
-from common.constants import ORCA_WHIRLPOOL_PROGRAM
-from common.serializers import (serialize_position, serialize_tick_array,
-                                    serialize_token_accounts,
-                                    serialize_whirlpool)
+from orca_whirlpool.accounts import AccountFinder, AccountFetcher
+from orca_whirlpool.constants import ORCA_WHIRLPOOL_PROGRAM_ID
+
+from common.serializers import (
+    serialize_position,
+    serialize_tick_array,
+    serialize_token_accounts,
+    serialize_whirlpool,
+)
 from common.utility import get_s3_bucket, get_timestamp, upload_to_s3
+from common.constants import ORCA_WHIRLPOOL_PROGRAM
 
 load_dotenv()
 
-# Whirlpool layout constants
 POOL_ACCOUNT_SIZE = 653
 TOKEN_MINT_A_OFFSET = 101
 TOKEN_MINT_B_OFFSET = 181
-PROGRAM_ID = ORCA_WHIRLPOOL_PROGRAM
+PROGRAM_ID = ORCA_WHIRLPOOL_PROGRAM  # Pubkey object
 
 
-# Fetch pools matching token mint
-@retry(
-    retry=retry_if_exception_type(SolanaRpcException),   # only RPC errors
-    wait=wait_exponential(multiplier=0.8, min=1, max=30),# 1s → 2s → 4s …
-    stop=stop_after_attempt(6),                          # give up after 6 tries
+SyncRetry = retry(
+    retry=retry_if_exception_type((SolanaRpcException, HTTPStatusError)),
+    wait=wait_exponential(multiplier=0.8, min=1, max=30),
+    stop=stop_after_attempt(6),
     reraise=True,
 )
+
+
+@SyncRetry
 def fetch_pool_addresses(rpc_url: str, token_mint: str) -> List[str]:
     client = Client(rpc_url)
     found = set()
@@ -48,54 +62,71 @@ def fetch_pool_addresses(rpc_url: str, token_mint: str) -> List[str]:
         MemcmpOpts(offset=TOKEN_MINT_B_OFFSET, bytes=token_mint),
     ]
 
-    resp_base = client.get_program_accounts(
+    for acc in client.get_program_accounts(
         PROGRAM_ID, commitment=Processed, filters=filters_base
-    )
-    for acc in resp_base.value:
+    ).value:
         found.add(str(acc.pubkey))
 
-    resp_quote = client.get_program_accounts(
+    for acc in client.get_program_accounts(
         PROGRAM_ID, commitment=Processed, filters=filters_quote
-    )
-    for acc in resp_quote.value:
+    ).value:
         found.add(str(acc.pubkey))
 
-    print(f"Found {len(found)} matching pools.")
-    # print(len(found))
+    print(f"Found {len(found)} matching Orca pools for mint {token_mint}")
     return list(found)
 
 
-async def run_orca(token: str, rpc_url: str):
+rpc_limiter = asyncio.Semaphore(10)  # max 30 concurrent RPCs
+
+
+async def with_retry(func, *args, **kwargs):
+    async for attempt in AsyncRetrying(
+        retry=retry_if_exception_type((SolanaRpcException, HTTPStatusError)),
+        wait=wait_exponential(multiplier=0.8, min=1, max=30),
+        stop=stop_after_attempt(6),
+        reraise=True,
+    ):
+        with attempt:
+            async with rpc_limiter:
+                return await func(*args, **kwargs)
+
+
+async def run_orca(token: str, rpc_url: str) -> None:
+
     pool_addresses = fetch_pool_addresses(rpc_url, token)
     if not pool_addresses:
         print("No pools found for token.")
         return
 
-    conn = AsyncClient(rpc_url)
-    fetcher = AccountFetcher(conn)
-    finder = AccountFinder(conn)
+    connection = AsyncClient(rpc_url)
+    fetcher = AccountFetcher(connection)
+    finder = AccountFinder(connection)
 
-    pool_rows: list[dict] = []  # pool‑level, no ticks
-    tick_rows: list[dict] = []  # tick arrays only
-    position_rows: list[dict] = []  # personal positions
+    pool_rows: list[dict] = []
+    tick_rows: list[dict] = []
+    position_rows: list[dict] = []
+
+    start_ts = time()
 
     for addr in pool_addresses:
         pubkey = Pubkey.from_string(addr)
         try:
-            whirlpool = await fetcher.get_whirlpool(pubkey)
-            tick_arrays_data = await finder.find_tick_arrays_by_whirlpool(
-                ORCA_WHIRLPOOL_PROGRAM_ID, pubkey
+            whirlpool = await with_retry(fetcher.get_whirlpool, pubkey)
+            tick_arrays_data = await with_retry(
+                finder.find_tick_arrays_by_whirlpool, ORCA_WHIRLPOOL_PROGRAM_ID, pubkey
             )
-            token_vault_a = await fetcher.get_token_account(whirlpool.token_vault_a)
-            token_vault_b = await fetcher.get_token_account(whirlpool.token_vault_b)
+            token_vault_a = await with_retry(
+                fetcher.get_token_account, whirlpool.token_vault_a
+            )
+            token_vault_b = await with_retry(
+                fetcher.get_token_account, whirlpool.token_vault_b
+            )
+            positions_data = await with_retry(
+                finder.find_positions_by_whirlpool, ORCA_WHIRLPOOL_PROGRAM_ID, pubkey
+            )
 
-            # personal positions
-            positions_data = await finder.find_positions_by_whirlpool(
-                ORCA_WHIRLPOOL_PROGRAM_ID, pubkey
-            )
             position_rows.extend(serialize_position(p) for p in positions_data)
 
-            # pool row (minus tick arrays)
             pool_rows.append(
                 {
                     "whirlpool": serialize_whirlpool(whirlpool, pubkey, token),
@@ -104,31 +135,31 @@ async def run_orca(token: str, rpc_url: str):
                 }
             )
 
-            # tick arrays with pool id for join
             tick_rows.append(
                 {
                     "pool": str(pubkey),
-                    "tick_arrays": [serialize_tick_array(ta) for ta in tick_arrays_data],
+                    "tick_arrays": [
+                        serialize_tick_array(ta) for ta in tick_arrays_data
+                    ],
                 }
             )
 
-            print(f"{addr}: {len(tick_arrays_data)} tick arrays, {len(positions_data)} positions")
-            sleep(0.8)
+            print(
+                f"{addr[:6]}…  tick_arrays={len(tick_arrays_data):<3} "
+                f"positions={len(positions_data):<4}"
+            )
 
-        except Exception as e:
-            print(f"Failed to fetch {addr}: {e}")
+        except Exception as exc:
+            print(f"Failed to fetch {addr}: {exc}")
 
-    # ── upload three separate objects ─────────────────────────────────
-    ts = get_timestamp() 
+    timestamp = get_timestamp()
     bucket = get_s3_bucket()
-    key_pool = f"orca_raw/pool/{token}_{ts}.json"
-    key_tick = f"orca_raw/tick/{token}_{ts}.json"
-    key_position = f"orca_raw/position/{token}_{ts}.json"
 
-    upload_to_s3(bucket, key_pool, pool_rows)
-    upload_to_s3(bucket, key_tick, tick_rows)
-    upload_to_s3(bucket, key_position, position_rows)
+    key_pool = f"orca_raw/pool/{token}_{timestamp}.json"
+    key_tick = f"orca_raw/tick/{token}_{timestamp}.json"
+    key_position = f"orca_raw/position/{token}_{timestamp}.json"
 
-    print("uploaded", key_pool, key_tick, key_position, sep="\n ‣ ")
-
-    await conn.close()
+    upload_to_s3(bucket=bucket, key=key_pool, data=pool_rows)
+    upload_to_s3(bucket=bucket, key=key_tick, data=tick_rows)
+    upload_to_s3(bucket=bucket, key=key_position, data=position_rows)
+    await connection.close()

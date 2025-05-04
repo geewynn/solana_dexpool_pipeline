@@ -1,8 +1,9 @@
 import os
 from solders.pubkey import Pubkey
 
-DEFAULT_RPC = os.getenv("rpc_url")
-print(f"Default RPC URL: {DEFAULT_RPC}")
+RAYDIUM_RPC = os.getenv("rpc_url")
+ORCA_RPC = os.getenv("orca_rpc_url")
+print(f"Default RPC URL: {RAYDIUM_RPC}")
 
 RAYDIUM_CLMM_PROGRAM = Pubkey.from_string(
     "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK"

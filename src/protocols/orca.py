@@ -162,9 +162,9 @@ async def run_orca(token: str, rpc_url: str) -> None:
     timestamp = get_timestamp()
     bucket = get_s3_bucket()
 
-    key_pool = f"orca_raw/pool/{token}_{timestamp}.json"
-    key_tick = f"orca_raw/tick/{token}_{timestamp}.json"
-    key_position = f"orca_raw/position/{token}_{timestamp}.json"
+    key_pool = f"orca_raw/pool/{token}_{timestamp}_pools.json"
+    key_tick = f"orca_raw/tick/{token}_{timestamp}_ticks.json"
+    key_position = f"orca_raw/position/{token}_{timestamp}_positions.json"
 
     upload_to_s3(bucket=bucket, key=key_pool, data=pool_rows)
     upload_to_s3(bucket=bucket, key=key_tick, data=tick_rows)

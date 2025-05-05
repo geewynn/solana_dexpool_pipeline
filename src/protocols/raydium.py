@@ -269,10 +269,10 @@ class RaydiumDataFetcher:
         timestamp = get_timestamp()
         bucket    = get_s3_bucket()
 
-        key_pool            = f"raydium_raw_new/pool/{token}_{timestamp}.json"
-        key_tick            = f"raydium_raw_new/tick/{token}_{timestamp}.json"
-        key_proto_position  = f"raydium_raw_new/protocol_position/{token}_{timestamp}.json"
-        key_pers_position   = f"raydium_raw_new/personal_position/{token}_{timestamp}.json"
+        key_pool            = f"raydium_raw_new/pool/{token}_{timestamp}_pools.json"
+        key_tick            = f"raydium_raw_new/tick/{token}_{timestamp}_ticks.json"
+        key_proto_position  = f"raydium_raw_new/protocol_position/{token}_{timestamp}_protocol_position.json"
+        key_pers_position   = f"raydium_raw_new/personal_position/{token}_{timestamp}_personal_position.json"
 
         upload_to_s3(bucket, key_pool,           pool_rows)
         upload_to_s3(bucket, key_tick,           tick_rows)

@@ -1,5 +1,6 @@
 # src/protocols/orca.py
 import asyncio
+from datetime import datetime
 from typing import List
 
 from dotenv import load_dotenv
@@ -106,7 +107,8 @@ async def run_orca(token: str, rpc_url: str) -> None:
     tick_rows: list[dict] = []
     position_rows: list[dict] = []
 
-    start_ts = time()
+    extraction_time = str(datetime.now())
+    print(extraction_time)
 
     for addr in pool_addresses:
         pubkey = Pubkey.from_string(addr)
@@ -125,13 +127,17 @@ async def run_orca(token: str, rpc_url: str) -> None:
                 finder.find_positions_by_whirlpool, ORCA_WHIRLPOOL_PROGRAM_ID, pubkey
             )
 
-            position_rows.extend(serialize_position(p) for p in positions_data)
+            position_rows.extend(
+            {**serialize_position(p), "extraction_timestamp": extraction_time}
+            for p in positions_data
+         )
 
             pool_rows.append(
                 {
                     "whirlpool": serialize_whirlpool(whirlpool, pubkey, token),
                     "token_vault_a_amount": serialize_token_accounts(token_vault_a),
                     "token_vault_b_amount": serialize_token_accounts(token_vault_b),
+                    "extraction_timestamp": extraction_time,
                 }
             )
 
@@ -141,6 +147,7 @@ async def run_orca(token: str, rpc_url: str) -> None:
                     "tick_arrays": [
                         serialize_tick_array(ta) for ta in tick_arrays_data
                     ],
+                    "extraction_timestamp": extraction_time
                 }
             )
 

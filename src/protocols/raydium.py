@@ -21,7 +21,6 @@ from common.utility import get_s3_bucket, get_timestamp, upload_to_s3
 
 load_dotenv()
 
-# ---------- layout constants -------------------------------------
 PROTOCOL_POSITION_SIZE = 225
 POOL_ID_OFFSET = 9
 TICK_ARRAY_SIZE = 60
@@ -222,6 +221,9 @@ class RaydiumDataFetcher:
             length: int) -> None:
 
         pools = self.fetch_pools_for_token(token, quote_offset, base_offset, length)
+        extraction_time = str(datetime.now())
+        print(extraction_time)
+
         print(f"Found {len(pools)} pools for token {token}")
 
         pool_rows: list[dict]      = []
@@ -231,15 +233,22 @@ class RaydiumDataFetcher:
 
         for p in pools:
             print(f"\n── {p}")
+            
             proto_pos = self.fetch_protocol_positions(p)
             if proto_pos:
-                proto_pos_rows.extend(proto_pos)
+                proto_pos_rows.extend(
+                    {**pos, "extraction_timestamp": extraction_time}
+                    for pos in proto_pos
+                )
             else:
                 print("no protocol positions")
 
             pers_pos = self.fetch_personal_positions(p)
             if pers_pos:
-                pers_pos_rows.extend(pers_pos)
+                pers_pos_rows.extend(
+                    {**pos, "extraction_timestamp": extraction_time}
+                    for pos in pers_pos
+                )
             else:
                 print("no personal positions")
 
@@ -247,8 +256,10 @@ class RaydiumDataFetcher:
             if pool_blob and "error" not in pool_blob:
                 tick_rows.append({
                     "pool": p,
-                    "tickArrays": pool_blob.pop("tickArrays", {})
+                    "tickArrays": pool_blob.pop("tickArrays", {}),
+                    "extraction_timestamp": extraction_time
                 })
+                pool_blob["extraction_timestamp"] = extraction_time
                 pool_rows.append(pool_blob)
             else:
                 print(f"Failed pool fetch: {pool_blob}")
@@ -258,10 +269,10 @@ class RaydiumDataFetcher:
         timestamp = get_timestamp()
         bucket    = get_s3_bucket()
 
-        key_pool            = f"raydium_raw/pool/{timestamp}.json"
-        key_tick            = f"raydium_raw/tick/{timestamp}.json"
-        key_proto_position  = f"raydium_raw/protocol_position/{timestamp}.json"
-        key_pers_position   = f"raydium_raw/personal_position/{timestamp}.json"
+        key_pool            = f"raydium_raw_new/pool/{token}_{timestamp}.json"
+        key_tick            = f"raydium_raw_new/tick/{token}_{timestamp}.json"
+        key_proto_position  = f"raydium_raw_new/protocol_position/{token}_{timestamp}.json"
+        key_pers_position   = f"raydium_raw_new/personal_position/{token}_{timestamp}.json"
 
         upload_to_s3(bucket, key_pool,           pool_rows)
         upload_to_s3(bucket, key_tick,           tick_rows)

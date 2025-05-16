@@ -8,6 +8,10 @@ dependencies = [
     "anchorpy>=0.21.0",
     "black>=25.1.0",
     "boto3>=1.38.6",
+    "dagster>=1.10.15",
+    "dagster-aws>=0.26.15",
+    "dagster-dbt>=0.26.15",
+    "dagster-webserver>=1.10.15",
     "isort>=6.0.1",
     "python-dotenv>=1.1.0",
     "requests>=2.32.3",
@@ -16,3 +20,21 @@ dependencies = [
     "tenacity>=9.1.2",
     "whirlpool-essentials>=0.1.0",
 ]
+
+
+[project.optional-dependencies]
+dev = [
+    "dagster-webserver", 
+    "pytest",
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.dagster]
+module_name = "dex_dagster.definitions"
+code_location_name = "dex_dagster"
+
+[tool.setuptools.packages.find]
+exclude=["dex_dagster_tests"]

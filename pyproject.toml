@@ -3,7 +3,7 @@ name = "solana-dexpool-pipeline"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = [
     "anchorpy>=0.21.0",
     "black>=25.1.0",

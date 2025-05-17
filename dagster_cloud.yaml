@@ -1,0 +1,4 @@
+locations:
+- code_source:
+    module_name: dex_dagster.definitions
+  location_name: dex_dagster

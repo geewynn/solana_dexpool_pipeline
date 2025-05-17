@@ -19,7 +19,7 @@ env:
   CLICKHOUSE_PROD_PORT: ${{ secrets.CLICKHOUSE_PROD_PORT }}
   DBT_TARGET: ${{ secrets.DBT_TARGET }}
   ENABLE_FAST_DEPLOYS: 'true'
-  PYTHON_VERSION: '3.13'
+  PYTHON_VERSION: '3.10'
   DAGSTER_CLOUD_FILE: 'dagster_cloud.yaml'
 
 jobs:

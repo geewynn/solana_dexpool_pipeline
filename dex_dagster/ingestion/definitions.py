@@ -29,7 +29,7 @@ ORCA_STORAGE_KEY = dg.EnvVar("ORCA_STORAGE_KEY").get_value()
 
 @dg.asset(
     group_name="solana_ingestion",
-    automation_condition=dg.AutomationCondition.on_cron("0 * * * *"),
+    automation_condition=dg.AutomationCondition.on_cron("*/10 * * * *"),
     kinds={"python"},
 )
 def raydium_snapshot(
@@ -53,7 +53,7 @@ def raydium_snapshot(
 
 @dg.asset(
     group_name="solana_ingestion",
-    automation_condition=dg.AutomationCondition.on_cron("0 * * * *"),
+    automation_condition=dg.AutomationCondition.on_cron("*/10 * * * *"),
     kinds={"python"},
 )
 def orca_snapshot(
@@ -71,12 +71,3 @@ def orca_snapshot(
         "position_key": f"{ORCA_STORAGE_KEY}/position/{solana.token_mint}_{ts}_positions.json",
     }
     return dg.MaterializeResult(metadata=meta)
-
-
-defs = dg.Definitions(
-    assets=[raydium_snapshot, orca_snapshot],
-    resources={
-        "s3_resource": s3_resource,
-        "solana": solana_config,
-    },
-)

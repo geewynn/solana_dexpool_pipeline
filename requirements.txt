@@ -1,0 +1,16 @@
+anchorpy>=0.21.0
+black>=25.1.0
+boto3>=1.38.6
+dagster>=1.10.15
+dagster-aws>=0.26.15
+dagster-dbt>=0.26.15
+dagster-webserver>=1.10.15
+dbt-clickhouse>=1.9.1
+dbt-core>=1.9.4
+isort>=6.0.1
+python-dotenv>=1.1.0
+requests>=2.32.3
+solana>=0.36.6
+solders>=0.26.0
+tenacity>=9.1.2
+whirlpool-essentials>=0.1.0

@@ -1,0 +1,66 @@
+name: dbt CI
+
+on:
+  push:
+    # run on every push, any branch except the Pages branch
+    branches-ignore: [gh-pages]
+  pull_request:
+    # run on every PR, whatever the source/target; skip gh-pages
+    branches-ignore: [gh-pages]
+
+concurrency:
+  group: ci-${{ github.head_ref || github.ref }}  
+  cancel-in-progress: true                       
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      # Tell dbt where the repo-scoped profiles.yml lives
+      DBT_PROFILES_DIR: .
+      # Inject warehouse secrets from Settings → Secrets → Actions
+      CLICKHOUSE_DEV_PASSWORD: ${{ secrets.CLICKHOUSE_DEV_PASSWORD }}
+      CLICKHOUSE_DEV_HOST: ${{ secrets.CLICKHOUSE_DEV_HOST }}
+      CLICKHOUSE_DEV_USER: ${{ secrets.CLICKHOUSE_DEV_USER }}
+      CLICKHOUSE_DEV_PORT: ${{ secrets.CLICKHOUSE_DEV_PORT }}
+      CLICKHOUSE_DEV_SCHEMA: ${{ secrets.CLICKHOUSE_DEV_SCHEMA }}
+      CLICKHOUSE_PROD_PASSWORD: ${{ secrets.CLICKHOUSE_PROD_PASSWORD }}
+      CLICKHOUSE_PROD_HOST: ${{ secrets.CLICKHOUSE_PROD_HOST }}
+      CLICKHOUSE_PROD_USER: ${{ secrets.CLICKHOUSE_PROD_USER }}
+      CLICKHOUSE_PROD_PORT: ${{ secrets.CLICKHOUSE_PROD_PORT }}
+      CLICKHOUSE_PROD_SCHEMA: ${{ secrets.CLICKHOUSE_PROD_SCHEMA }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with: { python-version: '3.13' }
+
+      - name: Install dbt + linter
+        run: |
+          pip install "dbt-core" "dbt-clickhouse" \
+                      sqlfluff sqlfluff-templater-dbt
+
+      - name: SQLFluff lint
+        run: sqlfluff lint                      
+
+      - name: dbt deps
+        run: dbt deps                            
+
+      - name: dbt compile
+        run: dbt compile --target dev            
+
+      - name: dbt build  (models + tests)
+        run: dbt build   --target dev
+
+      - name: dbt docs generate (validation only)
+        run: dbt docs generate --target dev
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dbt-docs
+          path: target/                         
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dbt-run-results
+          path: target/run_results.json

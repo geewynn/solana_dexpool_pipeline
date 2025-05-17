@@ -1,0 +1,54 @@
+[sqlfluff]
+exclude_rules = CP03, L014, L034, L054, L032, LT07, ST03, AL09, RF04, AL01, RF02
+# Reasons for exclusion
+# CP03: 
+#      Converts clickhouse functions to lower case which 
+#      does not align with clickhouse camel case naming convention
+# L014:
+#    To prevent the rule from changing columns names to lowercase.
+# L034:
+#    Breaks my column ordering style of columns.
+# L054:
+#    To allow columns reference on group and order by.
+# AL01, RF02: fix at a future date
+
+dialect = clickhouse
+templater = dbt
+runaway_limit = 15
+max_line_length = 120
+indent_unit = space
+
+[sqlfluff:indentation]
+indented_joins = False
+indented_using_on = True
+template_blocks_indent = True
+indent_unit = space
+tab_space_size = 4
+
+[sqlfluff:layout:type:comma]
+spacing_before = touch
+line_position = trailing
+
+[sqlfluff:rules:aliasing.table]
+aliasing = explicit
+
+[sqlfluff:rules:capitalisation.functions]
+extended_capitalisation_policy = lower
+ignore_words = None
+
+[sqlfluff:rules:capitalisation.literals]
+capitalisation_policy = lower
+ignore_words = None
+
+[sqlfluff:rules:layout.indent]
+indent_unit = space
+tab_space_size = 4 
+allow_implicit_indents = True
+
+[sqlfluff:rules:references.qualification]
+prefer_quoted = False
+enforce_table_references = True 
+exclude_references = None
+require_qualification = True
+ignore_comment_clauses = True
+minimum_tables = 3 

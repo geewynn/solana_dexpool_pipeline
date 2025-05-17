@@ -1,0 +1,243 @@
+version: 2
+
+models:
+  - name: stg_orca_pools
+    description: Staged Orca Whirlpool data with cleaned and renamed columns
+    columns:
+      - name: address
+        description: Unique identifier for the Orca Whirlpool
+        tests:
+          # - unique
+          - not_null
+
+      - name: program
+        description: Program ID
+        tests:
+          - not_null
+
+      - name: space
+        description: Account space
+        tests:
+          - not_null
+
+      - name: whirlpool_config
+        description: Whirlpool configuration address
+        tests:
+          - not_null
+
+      - name: whirlpool_bump
+        description: Whirlpool bump array
+
+      - name: token_mint_a
+        description: Token A mint address
+        tests:
+          - not_null
+
+      - name: token_mint_b
+        description: Token B mint address
+        tests:
+          - not_null
+
+      - name: token_vault_a
+        description: Token vault for token A
+        tests:
+          - not_null
+
+      - name: token_vault_b
+        description: Token vault for token B
+        tests:
+          - not_null
+
+      - name: liquidity
+        description: Current pool liquidity
+
+      - name: sqrt_price
+        description: Square root of price
+
+      - name: tick_current_index
+        description: Current tick index
+
+      - name: tick_spacing
+        description: Tick spacing value
+
+      - name: tick_spacing_seed
+        description: Tick spacing seed array
+
+      - name: fee_rate
+        description: Fee rate for the pool
+
+      - name: protocol_fee_rate
+        description: Protocol fee rate
+
+      - name: fee_growth_global_a
+        description: Global fee growth for token A
+
+      - name: fee_growth_global_b
+        description: Global fee growth for token B
+
+      - name: protocol_fee_owed_a
+        description: Protocol fees owed for token A
+
+      - name: protocol_fee_owed_b
+        description: Protocol fees owed for token B
+
+      - name: reward_infos
+        description: Array of reward configurations
+
+      - name: reward_last_updated_timestamp
+        description: Last timestamp rewards were updated
+
+      - name: name
+        description: Account name
+        tests:
+          - not_null
+
+      - name: type
+        description: Account type
+        tests:
+          - not_null
+
+      - name: ingestion_timestamp
+        description: Timestamp when record was ingested
+        tests:
+          - not_null
+
+  - name: stg_raydium_pools
+    description: Staged Raydium pool data with cleaned and renamed columns
+    columns:
+      - name: address
+        description: Unique identifier for the Raydium pool
+        tests:
+          # - unique
+          - not_null
+
+      - name: program 
+        description: Program ID
+        tests:
+          - not_null
+
+      - name: space
+        description: Account space
+        tests:
+          - not_null
+
+      - name: amm_config
+        description: AMM configuration address
+        tests:
+          - not_null
+
+      - name: owner
+        description: Pool owner address
+        tests:
+          - not_null
+
+      - name: observation_key
+        description: Observation key for the pool
+
+      - name: status
+        description: Current pool status
+
+      - name: open_time
+        description: Pool opening timestamp
+
+      - name: token_mint_0
+        description: First token mint address
+        tests:
+          - not_null
+
+      - name: token_mint_1
+        description: Second token mint address
+        tests:
+          - not_null
+
+      - name: token_vault_0
+        description: Token vault for first token
+        tests:
+          - not_null
+
+      - name: token_vault_1
+        description: Token vault for second token
+        tests:
+          - not_null
+
+      - name: mint_decimals_0
+        description: Decimals for first token mint
+        tests:
+          - not_null
+
+      - name: mint_decimals_1
+        description: Decimals for second token mint
+        tests:
+          - not_null
+
+      - name: liquidity
+        description: Current pool liquidity
+
+      - name: sqrt_price_x64
+        description: Square root of price scaled by 2^64
+
+      - name: tick_current
+        description: Current tick index
+
+      - name: tick_spacing
+        description: Tick spacing value
+
+      - name: swap_in_amount_token_0
+        description: Amount of token 0 swapped in
+
+      - name: swap_in_amount_token_1
+        description: Amount of token 1 swapped in
+
+      - name: swap_out_amount_token_0
+        description: Amount of token 0 swapped out
+
+      - name: swap_out_amount_token_1
+        description: Amount of token 1 swapped out
+
+      - name: fee_growth_global_0_x64
+        description: Global fee growth for token 0
+
+      - name: fee_growth_global_1_x64
+        description: Global fee growth for token 1
+
+      - name: fund_fees_token_0
+        description: Fund fees collected for token 0
+
+      - name: fund_fees_token_1
+        description: Fund fees collected for token 1
+
+      - name: protocol_fees_token_0
+        description: Protocol fees collected for token 0
+
+      - name: protocol_fees_token_1
+        description: Protocol fees collected for token 1
+
+      - name: total_fees_token_0
+        description: Total fees collected for token 0
+
+      - name: total_fees_token_1
+        description: Total fees collected for token 1
+
+      - name: total_fees_claimed_token_0
+        description: Total fees claimed for token 0
+
+      - name: total_fees_claimed_token_1
+        description: Total fees claimed for token 1
+
+      - name: reward_infos
+        description: Array of reward configurations
+
+      - name: name
+        description: Account name
+        tests:
+          - not_null
+
+      - name: type
+        description: Account type
+        tests:
+          - not_null
+
+      - name: ingestion_timestamp
+        description: Timestamp when record was ingested
+        tests:
+          - not_null

@@ -1,0 +1,155 @@
+version: 2
+
+sources:
+  - name: raw
+    database: default
+    schema: default
+    description: Raw DEX pool data from Solana
+    tables:
+      - name: raydium_pools_raw
+        description: Raw Raydium pool data from Solana
+        columns:
+          - name: timestamp
+            description: Record timestamp
+            tests:
+              - not_null
+          - name: pool
+            description: Tuple containing pool information.
+          - name: extension
+            description: Tuple containing extension information.
+          - name: currentTick
+            description: Current tick of the pool.
+          - name: tickSpacing
+            description: Current tick spacing of the pool.
+          - name: currentArrayStart
+            description: Current tick array start of the pool.
+          - name: tokenVault0
+            description: Tuple containing the token 0 vault data.
+          - name: tokenVault1
+            description: Tuple containing the token 1 vault data.
+          - name: extraction_timestamp
+            description: Timestamp of the extraction.
+            tests:
+              - not_null
+      
+      - name: raydium_pools_positions_raw
+        description: Raw Raydium pool position data
+        columns:
+          - name: poolId
+            description: raydium pool pubkey (pool address)
+            tests:
+              - not_null
+          - name: tickLowerIndex
+            description: Lower tick index of the position.
+          - name: tickUpperIndex
+            description: Upper tick index of the position.
+          - name: liquidity
+            description: Liquidity of the position.
+          - name: feeGrowthInside0LastX64
+            description: Fee growth inside for token 0.
+          - name: feeGrowthInside1LastX64
+            description: Fee growth inside for token 1.
+          - name: tokenFeesOwed0
+            description: Token fees owed for token 0.
+          - name: tokenFeesOwed1
+            description: Token fees owed for token 1.
+          - name: rewardGrowthInside 
+            description: Reward growth inside the position.
+          - name: extraction_timestamp
+            description: Timestamp of the extraction.
+            tests:
+              - not_null
+      
+      - name: raydium_personal_position_raw
+        description: Raw Raydium pool personal position data
+        columns:
+          - name: poolId
+            description: raydium pool pubkey (pool address)
+            tests:
+              - not_null
+          - name: tickLowerIndex
+            description: Lower tick index of the position.
+          - name: tickUpperIndex
+            description: Upper tick index of the position.
+          - name: liquidity
+            description: Liquidity of the position.
+          - name: feeGrowthInside0LastX64
+            description: Fee growth inside for token 0.
+          - name: feeGrowthInside1LastX64
+            description: Fee growth inside for token 1.
+          - name: tokenFeesOwed0
+            description: Token fees owed for token 0.
+          - name: tokenFeesOwed1
+            description: Token fees owed for token 1.
+          - name: rewardGrowthInside 
+            description: Reward growth inside the position.
+          - name: extraction_timestamp
+            description: Timestamp of the extraction.
+            tests:
+              - not_null
+      
+      - name: raydium_ticks_raw
+        description: Raw Raydium ticks data
+        columns:
+          - name: pool
+            description: raydium pool pubkey (pool address)
+            tests:
+              - not_null
+          - name: tickArrays
+            description: Lower tick index of the position.
+          - name: extraction_timestamp
+            description: Timestamp of the extraction.
+            tests:
+              - not_null
+
+      - name: orca_pools_raw
+        description: Raw Orca pool data from Solana
+        columns:
+          - name: whirlpool
+            description: Tuple containing pool information.
+            tests:
+              - not_null
+          - name: token_vault_a_amount
+            description: Tuple containing token a vault data.
+          - name: token_vault_b_amount
+            description: Tuple containing token b vault data.
+          - name: extraction_timestamp
+            description: Timestamp of the extraction.
+            tests:
+              - not_null
+
+      - name: orca_positions_raw
+        description: Raw Orca pool positions data from Solana
+        columns:
+          - name: pubkey
+            description: Position pubkey (address).
+          - name: whirlpool
+            description: whirlpool pool pubkey.
+          - name: liquidity
+            description: Liquidity of the position.
+          - name: tick_lower_index
+            description: Lower tick index of the position.
+          - name: tick_upper_index
+            description: Upper tick index of the position.
+          - name: fee_growth_ckpt_a
+            description: Tuple containing token a vault data.
+          - name: fee_owed_a
+            description: Fee growth inside for token a.
+          - name: fee_growth_ckpt_b
+            description: Fee growth inside for token b.
+          - name: fee_owed_b
+            description: Fee growth inside for token b.
+          - name: reward_info
+            description: Rewards infor Arrays
+          - name: extraction_timestamp
+            description: Timestamp of the extraction.
+          
+      - name: orca_ticks_raw
+        description: Raw Orca pool positions data from Solana
+        columns:
+          - name: pool
+            description: Position pubkey (address).
+          - name: tick_arrays
+            description: Tuple containing tick array data.
+          - name: extraction_timestamp
+            description: Timestamp of the extraction.

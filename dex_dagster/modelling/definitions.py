@@ -5,13 +5,13 @@ from typing import Any, Optional
 from dex_dagster.ingestion.definitions import raydium_snapshot, orca_snapshot, s3_resource, solana_config
 
 import dagster as dg
-from dagster_dbt import DagsterDbtTranslator, DbtCliResource, DbtProject, dbt_assets, build_schedule_from_dbt_selection
+from dagster_dbt import DagsterDbtTranslator, DbtCliResource, DbtProject, dbt_assets
 
 dbt_project = DbtProject(
     project_dir=Path(__file__).joinpath("..", "..", "..", "sol_dex_dbt_models").resolve(),
     target=os.getenv("DBT_TARGET"),
 )
-dbt_project.prepare_if_dev()
+dbt_project.compile()
 dbt_resource = DbtCliResource(project_dir=dbt_project)
 
 

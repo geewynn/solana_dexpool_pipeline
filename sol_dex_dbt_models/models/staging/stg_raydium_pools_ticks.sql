@@ -3,41 +3,43 @@ with source as (
     from {{ source('raw', 'raydium_ticks_raw') }}
 ),
 
-flatten_tick_data AS (
-    SELECT
-        arrayJoin(JSONExtractKeysAndValuesRaw(tickArrays).2) AS tick_data,
+flatten_tick_data as (
+    select
+        arrayJoin(JSONExtractKeysAndValuesRaw(tickArrays) .2) as tick_data,
         extraction_timestamp
-    FROM source
+    from source
 ),
 
-flat_parse AS (
-    SELECT
-        JSONExtractString(tick_data, 'address') AS address,
-        JSONExtractString(tick_data, 'parsed') AS parsed,
+flat_parse as (
+    select
+        JSONExtractString(tick_data, 'address') as address,
+        JSONExtractString(tick_data, 'parsed') as parsed,
         extraction_timestamp
-    FROM flatten_tick_data
+    from flatten_tick_data
 ),
 
-parse_data AS (
-    SELECT
+parse_data as (
+    select
         address,
         parsed,
-        JSONExtractString(parsed, 'name') AS name,
-        JSONExtractString(parsed, 'data') AS data,
-        JSONExtractString(parsed, 'type') AS type,
+        JSONExtractString(parsed, 'name') as name,
+        JSONExtractString(parsed, 'data') as data,
+        JSONExtractString(parsed, 'type') as type,
         extraction_timestamp
-    FROM flat_parse
+    from flat_parse
 ),
+
 final as (
-SELECT
-    address,
-    parsed,
-    type,
-    name,
-    JSONExtractString(data, 'poolId') AS poolId,
-    JSONExtractInt(data, 'startTickIndex') AS startTickIndex,
-    JSONExtractString(data, 'ticks') AS ticks,
-    extraction_timestamp
-FROM parse_data
+    select
+        address,
+        parsed,
+        type,
+        name,
+        JSONExtractString(data, 'poolId') as poolId,
+        JSONExtractInt(data, 'startTickIndex') as startTickIndex,
+        JSONExtractString(data, 'ticks') as ticks,
+        extraction_timestamp
+    from parse_data
 )
-SELECT * FROM final
+
+select * from final

@@ -1,5 +1,5 @@
 [sqlfluff]
-exclude_rules = CP03, L014, L034, L054, L032, LT07, ST03, AL09, RF04, AL01, RF02
+exclude_rules = CP03, L014, L034, L054, L032, LT07, ST03, AL09, RF04, AL01, RF02, RF01, CP05, AL04
 # Reasons for exclusion
 # CP03: 
 #      Converts clickhouse functions to lower case which 
@@ -11,6 +11,12 @@ exclude_rules = CP03, L014, L034, L054, L032, LT07, ST03, AL09, RF04, AL01, RF02
 # L054:
 #    To allow columns reference on group and order by.
 # AL01, RF02: fix at a future date
+# RF01: Reference 'pool.address' refers to table/view not found
+#       messes with nested json
+# CP05:
+#    To prevent the rule from changing datatypes to lowercase.
+# AL04: 
+#    Duplicate table alias 
 
 dialect = clickhouse
 templater = dbt

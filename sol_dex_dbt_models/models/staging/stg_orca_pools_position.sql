@@ -3,9 +3,8 @@ with source as (
     from {{ source('raw', 'orca_positions_raw') }}
 ),
 
-
-ticks_data AS (
-    SELECT 
+ticks_data as (
+    select
         pubkey,
         position_mint,
         liquidity,
@@ -16,9 +15,9 @@ ticks_data AS (
         fee_owed_a,
         fee_owed_b,
         reward_infos,
-        extraction_timestamp,
-FROM 
-  source
+        extraction_timestamp
+    from
+        source
 )
 
 select * from ticks_data

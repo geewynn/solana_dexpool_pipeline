@@ -19,6 +19,8 @@ dependencies = [
     "requests>=2.32.3",
     "solana>=0.36.6",
     "solders>=0.26.0",
+    "sqlfluff>=3.4.0",
+    "sqlfluff-templater-dbt>=3.4.0",
     "tenacity>=9.1.2",
     "whirlpool-essentials>=0.1.0",
 ]

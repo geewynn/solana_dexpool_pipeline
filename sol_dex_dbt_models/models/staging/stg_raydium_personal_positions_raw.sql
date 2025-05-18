@@ -15,7 +15,7 @@ select
     feeGrowthInside1LastX64,
     tokenFeesOwed0,
     tokenFeesOwed1,
-    rewardInfos
+    rewardInfos,
     extraction_timestamp
 from source
 )

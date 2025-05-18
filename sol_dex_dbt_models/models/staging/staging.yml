@@ -1,26 +1,16 @@
 version: 2
 
 models:
-  - name: stg_orca_pools
+  - name: stg_orca_pools_raw
     description: Staged Orca Whirlpool data with cleaned and renamed columns
     columns:
-      - name: address
+      - name: pool_address
         description: Unique identifier for the Orca Whirlpool
         tests:
           # - unique
           - not_null
 
-      - name: program
-        description: Program ID
-        tests:
-          - not_null
-
-      - name: space
-        description: Account space
-        tests:
-          - not_null
-
-      - name: whirlpool_config
+      - name: whirlpools_config
         description: Whirlpool configuration address
         tests:
           - not_null
@@ -87,25 +77,15 @@ models:
       - name: reward_last_updated_timestamp
         description: Last timestamp rewards were updated
 
-      - name: name
-        description: Account name
-        tests:
-          - not_null
-
-      - name: type
-        description: Account type
-        tests:
-          - not_null
-
-      - name: ingestion_timestamp
+      - name: extraction_timestamp
         description: Timestamp when record was ingested
         tests:
           - not_null
 
-  - name: stg_raydium_pools
+  - name: stg_raydium_pools_raw
     description: Staged Raydium pool data with cleaned and renamed columns
     columns:
-      - name: address
+      - name: pool_address
         description: Unique identifier for the Raydium pool
         tests:
           # - unique
@@ -227,17 +207,17 @@ models:
       - name: reward_infos
         description: Array of reward configurations
 
-      - name: name
+      - name: pool_name
         description: Account name
         tests:
           - not_null
 
-      - name: type
+      - name: pool_type
         description: Account type
         tests:
           - not_null
 
-      - name: ingestion_timestamp
+      - name: extraction_timestamp
         description: Timestamp when record was ingested
         tests:
           - not_null

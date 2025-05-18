@@ -1,6 +1,6 @@
-# src/protocols/raydium.py
 import logging
 import struct
+import time
 from datetime import datetime
 from time import sleep
 from typing import Dict, List, Optional
@@ -17,6 +17,7 @@ from tenacity import (
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
+    before_sleep_log,
 )
 
 from dex_dagster.ingestion.src.common.constants import RAYDIUM_STORAGE_KEY
@@ -43,6 +44,11 @@ POOL_ACCOUNT_SIZE = 1544
 TOKEN_MINT_A_OFFSET = 73
 TOKEN_MINT_B_OFFSET = 105
 
+# Rate limiting parameters
+MAX_REQUESTS_PER_SECOND = 3  # Conservative limit
+REQUEST_WINDOW = 1.0  # 1 second window
+last_request_time = 0
+
 
 class RaydiumDataFetcher:
     def __init__(self, rpc_url: str):
@@ -52,14 +58,36 @@ class RaydiumDataFetcher:
         self.PROGRAM_ID = Pubkey.from_string(
             "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK"
         )
+        self.request_times = []  # Track request timestamps for rate limiting
 
     def initialize(self) -> None:
         self.decoder.initialize()
 
+    def apply_rate_limit(self):
+        """Apply rate limiting to prevent 429 errors"""
+        current_time = time.time()
+        
+        # Remove timestamps older than our window
+        self.request_times = [t for t in self.request_times if current_time - t < REQUEST_WINDOW]
+        
+        # If we've made too many requests in the window, wait
+        if len(self.request_times) >= MAX_REQUESTS_PER_SECOND:
+            # Wait until the oldest request is outside our window
+            sleep_time = REQUEST_WINDOW - (current_time - self.request_times[0])
+            if sleep_time > 0:
+                logger.debug(f"Rate limiting: sleeping for {sleep_time:.2f}s")
+                time.sleep(sleep_time)
+                current_time = time.time()  # Update after sleeping
+        
+        # Record this request
+        self.request_times.append(current_time)
+
+    # Improved retry decorator with longer backoff and logging
     SyncRetry = retry(
         retry=retry_if_exception_type((SolanaRpcException, HTTPStatusError)),
-        wait=wait_exponential(multiplier=0.8, min=1, max=30),
-        stop=stop_after_attempt(6),
+        wait=wait_exponential(multiplier=1.5, min=2, max=60),  # Longer backoff
+        stop=stop_after_attempt(8),  # More attempts
+        before_sleep=before_sleep_log(logger, logging.INFO),  # Log retries
         reraise=True,
     )
 
@@ -71,6 +99,8 @@ class RaydiumDataFetcher:
         base_offset: int,
         data_length: int,
     ) -> List[str]:
+        self.apply_rate_limit()  # Apply rate limiting before request
+        
         memcmp_base = MemcmpOpts(offset=base_offset, bytes=token_mint)
         memcmp_quote = MemcmpOpts(offset=quote_offset, bytes=token_mint)
         found = set()
@@ -83,6 +113,8 @@ class RaydiumDataFetcher:
         for account in resp_base.value:
             found.add(str(account.pubkey))
 
+        self.apply_rate_limit()  # Apply rate limiting between requests
+        
         resp_quote = self.client.get_program_accounts(
             self.PROGRAM_ID,
             commitment=Processed,
@@ -112,7 +144,10 @@ class RaydiumDataFetcher:
         pda, _ = Pubkey.find_program_address(seeds, self.PROGRAM_ID)
         return str(pda)
 
+    @SyncRetry
     def get_account_data(self, address: str) -> Optional[Dict]:
+        self.apply_rate_limit()  # Apply rate limiting before request
+        
         try:
             pubkey = Pubkey.from_string(address)
             response = self.client.get_account_info(pubkey)
@@ -126,6 +161,8 @@ class RaydiumDataFetcher:
 
     @SyncRetry
     def fetch_protocol_positions(self, pool_pubkey: str) -> List[dict]:
+        self.apply_rate_limit()  # Apply rate limiting before request
+        
         pool_key = Pubkey.from_string(pool_pubkey)
         filters = [
             PROTOCOL_POSITION_SIZE,
@@ -144,6 +181,8 @@ class RaydiumDataFetcher:
 
     @SyncRetry
     def fetch_personal_positions(self, pool_pubkey: str) -> list[dict]:
+        self.apply_rate_limit()  # Apply rate limiting before request
+        
         pool_key = Pubkey.from_string(pool_pubkey)
         filters = [281, MemcmpOpts(offset=41, bytes=str(pool_key))]
 
@@ -174,9 +213,12 @@ class RaydiumDataFetcher:
             token_vault0 = data["tokenVault0"]
             token_vault1 = data["tokenVault1"]
 
+            self.apply_rate_limit()
             token_vault0_balance = self.client.get_token_account_balance(
                 Pubkey.from_string(token_vault0)
             )
+            
+            self.apply_rate_limit()
             token_vault1_balance = self.client.get_token_account_balance(
                 Pubkey.from_string(token_vault1)
             )
@@ -201,7 +243,7 @@ class RaydiumDataFetcher:
                 arr_data = self.get_account_data(arr_addr)
                 if arr_data and "error" not in arr_data:
                     tick_arrays[arr_addr] = arr_data
-                sleep(0.3)
+                time.sleep(0.2)
 
             return {
                 "timestamp": str(datetime.now()),
@@ -231,10 +273,8 @@ class RaydiumDataFetcher:
             return {"error": str(exc)}
 
     def run(self, token: str, quote_offset: int, base_offset: int, length: int) -> None:
-
         pools = self.fetch_pools_for_token(token, quote_offset, base_offset, length)
         extraction_time = str(datetime.now())
-        # logger.info(extraction_time)
 
         logger.info(f"Found {len(pools)} pools for token {token}")
 
@@ -246,6 +286,7 @@ class RaydiumDataFetcher:
         for p in pools:
             logger.info(f"\n── {p}")
 
+            logger.info("Fetching protocol positions...")
             proto_pos = self.fetch_protocol_positions(p)
             if proto_pos:
                 proto_pos_rows.extend(
@@ -255,6 +296,9 @@ class RaydiumDataFetcher:
             else:
                 logger.info("no protocol positions")
 
+            time.sleep(1)
+            
+            logger.info("Fetching personal positions...")
             pers_pos = self.fetch_personal_positions(p)
             if pers_pos:
                 pers_pos_rows.extend(
@@ -263,6 +307,9 @@ class RaydiumDataFetcher:
             else:
                 logger.info("no personal positions")
 
+            time.sleep(1)
+            
+            logger.info("Fetching pool data...")
             pool_blob = self.fetch_pool_data(p)
             if pool_blob and "error" not in pool_blob:
                 tick_rows.append(
@@ -277,12 +324,12 @@ class RaydiumDataFetcher:
             else:
                 logger.info(f"Failed pool fetch: {pool_blob}")
 
-            sleep(1)
+            logger.info(f"Completed processing pool {p}, pausing before next pool")
+            time.sleep(3)
 
         timestamp = get_timestamp()
         bucket = get_s3_bucket()
         
-
         key_pool = f"{RAYDIUM_STORAGE_KEY}/pool/{token}_{timestamp}_pools.json"
         key_tick = f"{RAYDIUM_STORAGE_KEY}/tick/{token}_{timestamp}_ticks.json"
         key_proto_position = f"{RAYDIUM_STORAGE_KEY}/protocol_position/{token}_{timestamp}_protocol_position.json"

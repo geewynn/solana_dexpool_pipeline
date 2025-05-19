@@ -1,0 +1,154 @@
+version: 2
+
+models:
+  - name: raydium_pools_liquidity_distribution
+    description: "Active liquidity distribution across ticks for Raydium pools"
+    columns:
+      - name: poolId
+        description: "Pool identifier"
+        tests:
+          - not_null
+      - name: tick_index
+        description: "Tick index for the liquidity position"
+        tests:
+          - not_null
+      - name: active_liquidity
+        description: "Cumulative active liquidity at this tick level"
+        tests:
+          - not_null
+
+  - name: raydium_pools_tokens_amount
+    description: "Current token balances for Raydium pools"
+    columns:
+      - name: pool_address
+        description: "Pool address identifier"
+        tests:
+          - not_null
+          - unique
+      - name: token_a_mint
+        description: "Token A mint address"
+        tests:
+          - not_null
+      - name: token_b_mint
+        description: "Token B mint address"
+        tests:
+          - not_null
+      - name: token_a_balance
+        description: "Current balance of token A in the pool"
+        tests:
+          - not_null
+      - name: token_b_balance
+        description: "Current balance of token B in the pool"
+        tests:
+          - not_null
+
+  - name: raydium_pools_metadata
+    description: "mart model for Raydium pool metadata with latest snapshot"
+    columns:
+      - name: pool_address
+        description: "Pool address identifier"
+        tests:
+          - not_null
+          - unique
+      - name: program
+        description: "Program address"
+      - name: owner
+        description: "Pool owner address"
+      - name: observation_key
+        description: "Observation key for the pool"
+      - name: open_time
+        description: "Pool opening timestamp"
+      - name: status
+        description: "Pool status"
+      - name: token_mint_0
+        description: "Token 0 mint address"
+        tests:
+          - not_null
+      - name: token_mint_1
+        description: "Token 1 mint address"
+        tests:
+          - not_null
+      - name: token_vault_0
+        description: "Token 0 vault address"
+      - name: token_vault_1
+        description: "Token 1 vault address"
+      - name: mint_decimals_0
+        description: "Decimal places for token 0"
+        tests:
+          - not_null
+      - name: mint_decimals_1
+        description: "Decimal places for token 1"
+        tests:
+          - not_null
+      - name: token_vault_0_amount
+        description: "Amount of token 0 in vault"
+        tests:
+          - not_null
+      - name: token_vault_1_amount
+        description: "Amount of token 1 in vault"
+        tests:
+          - not_null
+      - name: token_vault_0_balance
+        description: "Balance of token 0 in vault"
+        tests:
+          - not_null
+      - name: token_vault_1_balance
+        description: "Balance of token 1 in vault"
+        tests:
+          - not_null
+      - name: swap_in_amount_token_0
+        description: "Total swap in amount for token 0"
+      - name: swap_in_amount_token_1
+        description: "Total swap in amount for token 1"
+      - name: swap_out_amount_token_0
+        description: "Total swap out amount for token 0"
+      - name: swap_out_amount_token_1
+        description: "Total swap out amount for token 1"
+      - name: fee_growth_global_0_x64
+        description: "Global fee growth for token 0 (x64 format)"
+      - name: fee_growth_global_1_x64
+        description: "Global fee growth for token 1 (x64 format)"
+      - name: fund_fees_token_0
+        description: "Fund fees for token 0"
+      - name: fund_fees_token_1
+        description: "Fund fees for token 1"
+      - name: protocol_fees_token_0
+        description: "Protocol fees for token 0"
+      - name: protocol_fees_token_1
+        description: "Protocol fees for token 1"
+      - name: total_fees_token_0
+        description: "Total fees collected for token 0"
+      - name: total_fees_token_1
+        description: "Total fees collected for token 1"
+      - name: total_fees_claimed_token_0
+        description: "Total fees claimed for token 0"
+      - name: total_fees_claimed_token_1
+        description: "Total fees claimed for token 1"
+      - name: liquidity
+        description: "Total liquidity in the pool"
+        tests:
+          - not_null
+      - name: sqrt_price_x64
+        description: "Square root of price in x64 format"
+        tests:
+          - not_null
+      - name: tick_current
+        description: "Current tick index"
+        tests:
+          - not_null
+      - name: tick_spacing
+        description: "Tick spacing for the pool"
+        tests:
+          - not_null
+      - name: reward_infos
+        description: "Reward information for the pool"
+      - name: tick_array_bitmap
+        description: "Bitmap for tick arrays"
+      - name: pool_name
+        description: "Name of the pool"
+      - name: pool_type
+        description: "Type of the pool"
+      - name: extraction_timestamp
+        description: "Timestamp when data was extracted"
+        tests:
+          - not_null

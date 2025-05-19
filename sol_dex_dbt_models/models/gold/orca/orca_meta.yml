@@ -1,0 +1,121 @@
+version: 2
+
+models:
+  - name: orca_pools_liqidity_distribution
+    description: "Active liquidity distribution across ticks for Orca pools"
+    columns:
+      - name: pool
+        description: "Pool identifier"
+        tests:
+          - not_null
+      - name: tick_index
+        description: "Tick index for the liquidity position"
+        tests:
+          - not_null
+      - name: active_liquidity
+        description: "Cumulative active liquidity at this tick level"
+        tests:
+          - not_null
+
+  - name: orca_pools_tokens_amount
+    description: "Current token balances for Orca pools"
+    columns:
+      - name: pool_address
+        description: "Pool address identifier"
+        tests:
+          - not_null
+          - unique
+      - name: token_mint_a
+        description: "Token A mint address"
+        tests:
+          - not_null
+      - name: token_mint_b
+        description: "Token B mint address"
+        tests:
+          - not_null
+      - name: token_a_amount
+        description: "Current amount of token A in the pool"
+        tests:
+          - not_null
+      - name: token_b_amount
+        description: "Current amount of token B in the pool"
+        tests:
+          - not_null
+
+
+  - name: orca_pools_metadata
+    description: "mart model for Orca pool metadata with latest snapshot"
+    columns:
+      - name: pool_address
+        description: "Pool address identifier"
+        tests:
+          - not_null
+          - unique
+      - name: pool_token
+        description: "Pool token address"
+      - name: whirlpool_bump
+        description: "Whirlpool bump value"
+      - name: whirlpools_config
+        description: "Whirlpools configuration address"
+      - name: token_mint_a
+        description: "Token A mint address"
+        tests:
+          - not_null
+      - name: token_mint_b
+        description: "Token B mint address"
+        tests:
+          - not_null
+      - name: token_vault_a
+        description: "Token A vault address"
+      - name: token_vault_b
+        description: "Token B vault address"
+      - name: token_a_amount
+        description: "Current amount of token A in the pool"
+        tests:
+          - not_null
+      - name: token_b_amount
+        description: "Current amount of token B in the pool"
+        tests:
+          - not_null
+      - name: tick_spacing
+        description: "Tick spacing for the pool"
+        tests:
+          - not_null
+      - name: tick_spacing_seed
+        description: "Tick spacing seed value"
+      - name: sqrt_price
+        description: "Square root of the current price"
+        tests:
+          - not_null
+      - name: liquidity
+        description: "Total liquidity in the pool"
+        tests:
+          - not_null
+      - name: tick_current_index
+        description: "Current tick index"
+        tests:
+          - not_null
+      - name: fee_rate
+        description: "Pool fee rate"
+        tests:
+          - not_null
+      - name: protocol_fee_rate
+        description: "Protocol fee rate"
+        tests:
+          - not_null
+      - name: fee_growth_global_a
+        description: "Global fee growth for token A"
+      - name: fee_growth_global_b
+        description: "Global fee growth for token B"
+      - name: protocol_fee_owed_a
+        description: "Protocol fees owed for token A"
+      - name: protocol_fee_owed_b
+        description: "Protocol fees owed for token B"
+      - name: reward_infos
+        description: "Reward information for the pool"
+      - name: reward_last_updated_timestamp
+        description: "Last updated timestamp for rewards"
+      - name: extraction_timestamp
+        description: "Timestamp when data was extracted"
+        tests:
+          - not_null
